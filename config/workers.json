@@ -1,0 +1,28 @@
+{
+  "workers": [
+    {
+      "id": "mac-studio-01-ollama",
+      "host": "192.168.1.100",
+      "port": 11434,
+      "type": "ollama",
+      "model": "llama2",
+      "max_concurrent_requests": 5
+    },
+    {
+      "id": "mac-studio-02-lmstudio",
+      "host": "192.168.1.101",
+      "port": 1234,
+      "type": "lm_studio",
+      "model": "mistral-7b-instruct-v0.2",
+      "max_concurrent_requests": 3
+    },
+    {
+      "id": "mac-studio-03-ollama",
+      "host": "192.168.1.102",
+      "port": 11434,
+      "type": "ollama",
+      "model": "codellama",
+      "max_concurrent_requests": 4
+    }
+  ]
+}
