@@ -102,7 +102,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```bash
 # Choose a location for the project
 cd ~/Documents
-git clone https://github.com/yourusername/distributed-llm.git
+git clone https://github.com/LaansDole/distributed-llm-mac.git
 cd distributed-llm
 ```
 
