@@ -1,14 +1,16 @@
 # Distributed LLM System
 
-A scalable system for processing research papers across multiple Mac computers using LM Studio and Ollama. Transform your 30-minute research paper review process into a 2-minute automated analysis by distributing work across all your Mac computers.
+A scalable system for processing research papers across multiple Mac computers using **LM Studio** for enhanced performance. Transform your 30-minute research paper review process into a 2-minute automated analysis by distributing work across all your Mac computers.
 
-Perfect for:
+Perfect for Mac-based research labs and academic environments:
 - Researchers analyzing hundreds of papers
 - Literature reviews and systematic studies
 - Extracting key findings from academic papers
 - Summarizing methodologies and results
+- Optimizing Mac hardware utilization for research workflows
+- Processing large document collections efficiently
 
-## System Architecture
+## System Architecture (Mac-Focused with LM Studio)
 
 ```
                   Your Local Network
@@ -20,27 +22,39 @@ Perfect for:
           |                               |
           +-----------+-----------+-------+
                       |
-               Worker Mac 2         Worker Mac N
-              (Ollama)           (LM Studio)
+      +---------------+---------------+---------------+
+      |               |               |               |
+Worker Mac 2    Worker Mac 3      Worker Mac N      Worker Mac N+1
+   (LM Studio)     (LM Studio)     (LM Studio)       (Ollama)
+                   |
+      +-----------+-----------+
+      |                       |
+   Mac Mini (M1)        MacBook Pro (M2)
 ```
 
 Key Features:
-- Distribute 100+ papers across multiple Macs automatically
-- 10-35x faster than processing on a single machine
-- Built-in research-focused prompts
-- Automatic load balancing and error handling
-- Works with existing Mac hardware (M1/M2/M3)
+- **Mac-First Architecture**: Optimized specifically for Mac hardware and macOS
+- **LM Studio Integration**: Primary solution optimized for Mac performance
+- **Scalable Distribution**: Process papers across 2-35 Mac computers simultaneously
+- **Mac Resource Optimization**: Leverage Apple Silicon (M1/M2/M3) performance
+- **Distribute 100+ papers** across multiple Macs automatically
+- **10-35x faster** than processing on a single machine
+- **Built-in research-focused prompts** optimized for academic workflows
+- **Automatic load balancing** with Mac-aware performance tuning
+- **Native macOS integration** with proper system integration
+- **Optional Exo Support**: For advanced users wanting to run larger models (requires admin access)
 
 ## Prerequisites Checklist
 
 ### Required Hardware
-- **1 Master Mac** - Runs this distributed-llm project
-- **1-35 Worker Macs** - Each runs LM Studio or Ollama
-- All computers on the same network (WiFi or Ethernet)
+- **1 Master Mac** - Runs this distributed-llm project (M1/M2/M3 recommended)
+- **1-35 Worker Macs** - Each runs LM Studio or Ollama (any Mac with Apple Silicon or Intel)
+- All Macs on the same network (WiFi or Ethernet)
 
 ### Software Requirements
-- **Workers**: LM Studio (recommended) or Ollama
+- **Workers**: LM Studio (recommended for Mac optimization), Ollama
 - **Master**: Python 3.8+ and uv (package manager)
+- **Exo**: Optional - for clustering multiple Macs to run larger models (requires admin access)
 
 No cloud services or API keys needed - everything runs locally on your Macs!
 
@@ -145,6 +159,22 @@ Edit `config/my_workers.json`:
       "type": "lm_studio",
       "model": "mistral-7b-instruct-v0.2",
       "max_concurrent_requests": 5
+    },
+    {
+      "id": "mac-mini-m1",
+      "host": "192.168.1.108",
+      "port": 1234,
+      "type": "lm_studio",
+      "model": "mistral-7b-instruct-v0.2",
+      "max_concurrent_requests": 3
+    },
+    {
+      "id": "macbook-air-m2",
+      "host": "192.168.1.109",
+      "port": 1234,
+      "type": "lm_studio",
+      "model": "mistral-7b-instruct-v0.2",
+      "max_concurrent_requests": 2
     }
   ]
 }
@@ -153,10 +183,18 @@ Edit `config/my_workers.json`:
 **Notes:**
 - `host`: The IP address from Step 1.4 for each worker
 - `id`: A descriptive name for each computer
+- `type`: Worker type - `"lm_studio"` (recommended) or `"ollama"`
 - `max_concurrent_requests`:
-  - M1/M2 Macs: 2-3
+  - M1/M2 base Macs: 2-3
   - M1/M2 Pro/Max: 3-5
   - M1/M2 Ultra: 5-8
+
+**Performance Recommendations by Mac Model:**
+- **MacBook Air (M1/M2)**: 2 concurrent requests
+- **MacBook Pro (M1/M2)**: 3-5 concurrent requests
+- **iMac (M1/M2)**: 3-4 concurrent requests
+- **Mac Studio (M1/M2)**: 5-8 concurrent requests
+- **Mac Pro**: 8-12 concurrent requests
 
 ## Step 3: Test the System
 
@@ -359,10 +397,15 @@ Built-in prompt templates for common research tasks:
 |---------|-------------|---------|
 | `id` | Unique identifier for the worker | Required |
 | `host` | IP address or hostname | Required |
-| `port` | API server port | 11434 (Ollama), 1234 (LM Studio) |
-| `type` | "ollama" or "lm_studio" | Required |
+| `port` | API server port | 11434 (Ollama), 1234 (LM Studio), 52415 (Exo) |
+| `type` | "ollama", "lm_studio", or "exo" | Required |
 | `model` | Model name | Required |
 | `max_concurrent_requests` | Max concurrent requests per worker | 5 |
+
+**Worker Types:**
+- **`lm_studio`**: LM Studio server with ChatGPT-style completions API
+- **`ollama`**: Ollama server with Ollama API
+- **`exo`**: Exo cluster with ChatGPT-compatible API, supports massive models via device clustering
 
 ### Finding Worker IPs
 ```bash
@@ -537,6 +580,53 @@ distributed-llm/
 ├── pyproject.toml      # Project configuration and dependencies
 └── README.md
 ```
+
+## Optional: Exo Cluster Integration (Advanced)
+
+**⚠️ Requires Admin Access**: This optional feature allows you to run larger models (70B+ parameters) across multiple Macs using Exo clusters. Requires system-level network profile installation and admin privileges.
+
+### When to Use Exo
+
+Consider Exo if you need to:
+- Run models too large for a single Mac (70B+ parameters)
+- Leverage older/unused Macs for additional compute power
+- Experiment with massive language models locally
+
+### Quick Exo Setup
+
+1. **Install Exo** (choose one method):
+   ```bash
+   # Method 1: Download .dmg (easier, requires admin)
+   # Download from: https://github.com/exo-explore/exo/releases
+
+   # Method 2: Build from source (no admin required)
+   git clone https://github.com/exo-explore/exo.git
+   cd exo
+   pip install -e .
+   ```
+
+2. **Start Exo on Multiple Macs**:
+   ```bash
+   exo  # Starts on default port 52415
+   ```
+
+3. **Add Exo Workers to Configuration**:
+   ```json
+   {
+     "workers": [
+       {
+         "id": "exo-cluster-large-models",
+         "host": "localhost",
+         "port": 52415,
+         "type": "exo",
+         "model": "llama-3.1-70b",
+         "max_concurrent_requests": 8
+       }
+     ]
+   }
+   ```
+
+**💡 Pro Tip**: Start with LM Studio workers for most use cases. Add Exo only if you need larger models than single Macs can handle.
 
 ## Debug Mode
 
