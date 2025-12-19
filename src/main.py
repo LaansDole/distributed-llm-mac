@@ -2,20 +2,20 @@
 Main entry point for the distributed LLM load balancer
 """
 
-import asyncio
 import argparse
+import asyncio
 import json
-import sys
 import os
+import sys
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent))
 
+from src.config import load_config, load_workers_config
 from src.load_balancer import LoadBalancer
 from src.worker import Worker, WorkerType
-from src.config import load_workers_config, load_config, get_config_from_env
 
 
 def create_workers_from_config(config_data: List[Dict[str, Any]]) -> List[Worker]:
@@ -24,12 +24,12 @@ def create_workers_from_config(config_data: List[Dict[str, Any]]) -> List[Worker
     for worker_data in config_data:
         try:
             worker = Worker(
-                id=worker_data['id'],
-                host=worker_data['host'],
-                port=worker_data['port'],
-                worker_type=WorkerType(worker_data['type']),
-                model=worker_data['model'],
-                max_concurrent_requests=worker_data.get('max_concurrent_requests', 5)
+                id=worker_data["id"],
+                host=worker_data["host"],
+                port=worker_data["port"],
+                worker_type=WorkerType(worker_data["type"]),
+                model=worker_data["model"],
+                max_concurrent_requests=worker_data.get("max_concurrent_requests", 5),
             )
             workers.append(worker)
             print(f"Added worker: {worker}")
@@ -64,7 +64,7 @@ async def test_workers(workers: List[Worker]):
         print(f"\nTesting with prompt: '{test_prompt}'")
 
         try:
-            result = await lb.process_request(test_prompt)
+            await lb.process_request(test_prompt)
             print("✓ Test request successful")
             return True
         except Exception as e:
@@ -75,22 +75,22 @@ async def test_workers(workers: List[Worker]):
 async def interactive_mode(workers: List[Worker]):
     """Interactive mode for testing requests"""
     async with LoadBalancer(workers) as lb:
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("INTERACTIVE MODE")
-        print("="*60)
+        print("=" * 60)
         print("Enter prompts to process (or 'quit' to exit, 'status' for metrics)")
-        print("-"*60)
+        print("-" * 60)
 
         while True:
             try:
                 prompt = input("\nPrompt> ").strip()
 
-                if prompt.lower() in ['quit', 'exit', 'q']:
+                if prompt.lower() in ["quit", "exit", "q"]:
                     break
-                elif prompt.lower() == 'status':
+                elif prompt.lower() == "status":
                     lb.print_status()
                     continue
-                elif prompt.lower() == 'metrics':
+                elif prompt.lower() == "metrics":
                     metrics = lb.get_metrics()
                     print(json.dumps(metrics, indent=2))
                     continue
@@ -105,10 +105,15 @@ async def interactive_mode(workers: List[Worker]):
                     elapsed = asyncio.get_event_loop().time() - start_time
 
                     # Extract response based on worker type
-                    if result and 'response' in result:
-                        response = result['response']
-                    elif result and 'choices' in result and result['choices']:
-                        response = result['choices'][0]['text']
+                    if result and "response" in result:
+                        response = result["response"]
+                    elif result and "choices" in result and result["choices"]:
+                        # Check for ChatGPT format (Exo)
+                        if "message" in result["choices"][0]:
+                            response = result["choices"][0]["message"]["content"]
+                        else:
+                            # LM Studio format
+                            response = result["choices"][0]["text"]
                     else:
                         response = str(result)
 
@@ -135,7 +140,7 @@ async def benchmark_mode(workers: List[Worker], num_requests: int = 50):
         "Explain the concept of machine learning.",
         "Write a short poem about technology.",
         "What are the benefits of renewable energy?",
-        "Describe the process of photosynthesis."
+        "Describe the process of photosynthesis.",
     ] * (num_requests // 5 + 1)
 
     test_prompts = test_prompts[:num_requests]
@@ -148,17 +153,17 @@ async def benchmark_mode(workers: List[Worker], num_requests: int = 50):
         elapsed = asyncio.get_event_loop().time() - start_time
 
         # Calculate statistics
-        successful = sum(1 for r in results if r['success'])
+        successful = sum(1 for r in results if r["success"])
         failed = len(results) - successful
         rps = len(results) / elapsed
 
-        print(f"\nBenchmark Results:")
+        print("\nBenchmark Results:")
         print(f"  Total requests: {len(results)}")
         print(f"  Successful: {successful}")
         print(f"  Failed: {failed}")
         print(f"  Time taken: {elapsed:.2f}s")
         print(f"  Requests/sec: {rps:.2f}")
-        print(f"  Success rate: {(successful/len(results))*100:.1f}%")
+        print(f"  Success rate: {(successful / len(results)) * 100:.1f}%")
 
         # Show worker metrics
         lb.print_status()
@@ -166,20 +171,21 @@ async def benchmark_mode(workers: List[Worker], num_requests: int = 50):
 
 def main():
     parser = argparse.ArgumentParser(description="Distributed LLM Load Balancer")
-    parser.add_argument('--config', '-c', type=str, default='config/workers.json',
-                        help='Path to worker configuration file')
-    parser.add_argument('--settings', '-s', type=str,
-                        help='Path to load balancer settings file')
-    parser.add_argument('--test', '-t', action='store_true',
-                        help='Test worker connectivity')
-    parser.add_argument('--interactive', '-i', action='store_true',
-                        help='Run in interactive mode')
-    parser.add_argument('--benchmark', '-b', type=int, metavar='N',
-                        help='Run benchmark with N requests')
-    parser.add_argument('--prompt', '-p', type=str,
-                        help='Process a single prompt')
-    parser.add_argument('--output', '-o', type=str,
-                        help='Output file for results (JSON format)')
+    parser.add_argument(
+        "--config",
+        "-c",
+        type=str,
+        default="config/workers.json",
+        help="Path to worker configuration file",
+    )
+    parser.add_argument("--settings", "-s", type=str, help="Path to load balancer settings file")
+    parser.add_argument("--test", "-t", action="store_true", help="Test worker connectivity")
+    parser.add_argument("--interactive", "-i", action="store_true", help="Run in interactive mode")
+    parser.add_argument(
+        "--benchmark", "-b", type=int, metavar="N", help="Run benchmark with N requests"
+    )
+    parser.add_argument("--prompt", "-p", type=str, help="Process a single prompt")
+    parser.add_argument("--output", "-o", type=str, help="Output file for results (JSON format)")
 
     args = parser.parse_args()
 
@@ -199,8 +205,11 @@ def main():
             settings = load_config(args.settings)
 
         print(f"Loaded {len(workers)} workers from configuration")
-        print(f"Worker types: {len([w for w in workers if w.worker_type.value == 'ollama'])} Ollama, "
-              f"{len([w for w in workers if w.worker_type.value == 'lm_studio'])} LM Studio")
+        print(
+            f"Worker types: {len([w for w in workers if w.worker_type.value == 'ollama'])} Ollama, "
+            f"{len([w for w in workers if w.worker_type.value == 'lm_studio'])} LM Studio, "
+            f"{len([w for w in workers if w.worker_type.value == 'exo'])} Exo"
+        )
 
         # Run appropriate mode
         if args.test:
@@ -214,6 +223,7 @@ def main():
             asyncio.run(benchmark_mode(workers, args.benchmark))
 
         elif args.prompt:
+
             async def single_request():
                 async with LoadBalancer(workers, config=settings) as lb:
                     result = await lb.process_request(args.prompt)
@@ -221,7 +231,7 @@ def main():
 
             result = asyncio.run(single_request())
             if args.output:
-                with open(args.output, 'w') as f:
+                with open(args.output, "w") as f:
                     json.dump(result, f, indent=2)
                 print(f"Result saved to {args.output}")
             else:

@@ -1,23 +1,24 @@
 """
-Worker node abstraction for Ollama and LM Studio
+Worker node abstraction for Ollama, LM Studio, and Exo clusters
 """
 
-from enum import Enum
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Deque
-from collections import deque
 import time
-import json
+from collections import deque
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Deque, Dict
 
 
 class WorkerType(Enum):
     OLLAMA = "ollama"
     LM_STUDIO = "lm_studio"
+    EXO = "exo"
 
 
 @dataclass
 class Worker:
-    """Represents a worker node (Ollama or LM Studio instance)"""
+    """Represents a worker node (Ollama, LM Studio, or Exo cluster instance)"""
+
     id: str
     host: str
     port: int
@@ -40,21 +41,27 @@ class Worker:
     def api_endpoint(self) -> str:
         if self.worker_type == WorkerType.OLLAMA:
             return f"{self.base_url}/api/generate"
-        else:  # LM Studio
+        elif self.worker_type == WorkerType.LM_STUDIO:
             return f"{self.base_url}/v1/completions"
+        else:  # EXO
+            return f"{self.base_url}/v1/chat/completions"
 
     @property
     def health_endpoint(self) -> str:
         if self.worker_type == WorkerType.OLLAMA:
             return f"{self.base_url}/api/tags"
-        else:  # LM Studio
+        else:  # LM Studio or EXO
             return f"{self.base_url}/v1/models"
+
+    @property
+    def is_chat_format(self) -> bool:
+        """Check if worker uses ChatGPT-compatible messages format"""
+        return self.worker_type == WorkerType.EXO
 
     @property
     def is_available(self) -> bool:
         """Check if worker is available for new requests"""
-        return (self.is_healthy and
-                self.current_requests < self.max_concurrent_requests)
+        return self.is_healthy and self.current_requests < self.max_concurrent_requests
 
     @property
     def load_percentage(self) -> float:
@@ -83,7 +90,9 @@ class Worker:
             return 0.0
 
         # Availability weight (inverse of current load)
-        availability_weight = (self.max_concurrent_requests - self.current_requests) / self.max_concurrent_requests
+        availability_weight = (
+            self.max_concurrent_requests - self.current_requests
+        ) / self.max_concurrent_requests
 
         # Response time weight (inverse, with minimum to avoid division by zero)
         response_time_weight = 1.0 / max(self.average_response_time or 0.1, 0.1)
@@ -92,9 +101,7 @@ class Worker:
         success_rate_weight = self.success_rate
 
         # Combined weight (adjust factors as needed)
-        return (availability_weight * 0.4 +
-                success_rate_weight * 0.4 +
-                response_time_weight * 0.2)
+        return availability_weight * 0.4 + success_rate_weight * 0.4 + response_time_weight * 0.2
 
     def update_response_time(self, response_time: float):
         """Update response time history"""
@@ -113,22 +120,22 @@ class Worker:
     def to_dict(self) -> Dict:
         """Convert worker to dictionary"""
         return {
-            'id': self.id,
-            'host': self.host,
-            'port': self.port,
-            'type': self.worker_type.value,
-            'model': self.model,
-            'is_healthy': self.is_healthy,
-            'is_available': self.is_available,
-            'current_requests': self.current_requests,
-            'max_concurrent_requests': self.max_concurrent_requests,
-            'load_percentage': self.load_percentage,
-            'average_response_time': self.average_response_time,
-            'success_rate': self.success_rate,
-            'total_requests': self.total_requests,
-            'failed_requests': self.failed_requests,
-            'last_used': self.last_used,
-            'last_health_check': self.last_health_check
+            "id": self.id,
+            "host": self.host,
+            "port": self.port,
+            "type": self.worker_type.value,
+            "model": self.model,
+            "is_healthy": self.is_healthy,
+            "is_available": self.is_available,
+            "current_requests": self.current_requests,
+            "max_concurrent_requests": self.max_concurrent_requests,
+            "load_percentage": self.load_percentage,
+            "average_response_time": self.average_response_time,
+            "success_rate": self.success_rate,
+            "total_requests": self.total_requests,
+            "failed_requests": self.failed_requests,
+            "last_used": self.last_used,
+            "last_health_check": self.last_health_check,
         }
 
     def __str__(self) -> str:
@@ -137,13 +144,13 @@ class Worker:
         return f"{self.id} ({status}) {self.host}:{self.port} - {self.load_percentage:.0f}% load"
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'Worker':
+    def from_dict(cls, data: Dict) -> "Worker":
         """Create worker from dictionary"""
         return cls(
-            id=data['id'],
-            host=data['host'],
-            port=data['port'],
-            worker_type=WorkerType(data['type']),
-            model=data['model'],
-            max_concurrent_requests=data.get('max_concurrent_requests', 5)
+            id=data["id"],
+            host=data["host"],
+            port=data["port"],
+            worker_type=WorkerType(data["type"]),
+            model=data["model"],
+            max_concurrent_requests=data.get("max_concurrent_requests", 5),
         )
