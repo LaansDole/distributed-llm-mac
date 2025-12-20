@@ -58,16 +58,20 @@ uv run python -m src.main --config config/my_workers.json --test
 
 ## Available Scripts
 
+All scripts use the load balancer to distribute work across your Mac Studios/workers. Specify your worker configuration with `--config` (defaults to `config/workers.json`).
+
 ### 1. Process Research Papers
 ```bash
 # Use research presets (5 prompts per paper)
 uv run python scripts/process_directory.py \
+  --config config/my_workers.json \
   --input ~/research/papers \
   --preset research \
   --max-concurrent 50
 
 # Custom prompts
 uv run python scripts/process_directory.py \
+  --config config/my_workers.json \
   -i ~/papers \
   -p "What is the main contribution of this paper?" \
   -p "Extract the methodology" \
@@ -79,27 +83,50 @@ uv run python scripts/process_directory.py \
 - `summary` - Concise summaries and main points
 - `analysis` - Strengths, weaknesses, innovations
 
+**How it works:** The script loads your workers from config, creates a LoadBalancer instance, then distributes all prompts × files across available workers using weighted selection and health monitoring.
+
 ### 2. Benchmark Performance
 ```bash
 # Full benchmark (concurrency + worker scaling)
-uv run python scripts/benchmark.py
+uv run python scripts/benchmark.py --config config/my_workers.json
 
 # Test specific concurrency levels
-uv run python scripts/benchmark.py --mode concurrency --requests 100
+uv run python scripts/benchmark.py --config config/my_workers.json --mode concurrency --requests 100
 
 # Output to custom file
-uv run python scripts/benchmark.py -o my_results.json
+uv run python scripts/benchmark.py -c config/my_workers.json -o my_results.json
 ```
+
+**How it works:** Tests your distributed setup with increasing concurrency levels (1, 5, 10, 20, 50, 100) to find optimal performance. Shows requests/sec, response times, and per-worker utilization.
+
+**Comparing Single vs Multiple Mac Studios:**
+```bash
+# Create config for single Mac Studio (config/single_studio.json)
+# Then compare performance:
+uv run python scripts/benchmark.py -c config/single_studio.json -o results_single.json
+uv run python scripts/benchmark.py -c config/my_workers.json -o results_multiple.json
+
+# Compare results (view speedup)
+jq '.concurrency_benchmark[] | {concurrency, rps: .requests_per_second}' results_*.json
+```
+
+Expected speedup with 3 Mac Studios: **2.5-2.8x** faster than single Studio.
+
+**For detailed benchmarking guide:** See [docs/benchmarking.md](docs/benchmarking.md)
 
 ### 3. Interactive Mode
 ```bash
 uv run python -m src.main --config config/my_workers.json --interactive
 ```
 
+**How it works:** Enter prompts interactively and watch the load balancer distribute them across workers in real-time. Use `status` to see worker metrics or `metrics` for detailed stats.
+
 ### 4. Quick Setup Wizard
 ```bash
 uv run python scripts/quickstart.py
 ```
+
+**How it works:** Guides you through installation, config creation, and testing. Creates example config if needed.
 
 ## Worker Configuration
 
