@@ -113,7 +113,7 @@ async def benchmark_with_scaling(workers: List[Worker], num_requests: int = 100,
 
             # Calculate response times from metrics
             metrics = lb.get_metrics()
-            response_times = list(lb.metrics['response_times'][-num_requests:])
+            response_times = list(lb.metrics['response_times'])[-num_requests:]
 
             result = {
                 'concurrency': concurrency,
