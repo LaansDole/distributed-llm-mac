@@ -28,7 +28,9 @@ No cloud services or API keys needed - everything runs locally on your Macs!
 
 Do this on EACH Mac that will serve as a worker:
 
-### 1.1 Install LM Studio
+### Set up Distributed LLM
+
+1. **Install Dependencies**
 ```bash
 # Install uv (package manager)
 curl -LsSf https://astral.sh/uv/install.sh | sh
