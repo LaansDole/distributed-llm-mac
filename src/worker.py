@@ -105,9 +105,9 @@ class Worker:
         # Success rate weight
         success_rate_weight = self.success_rate
 
-        # Combined weight with emphasis on availability and success rate
-        # Reduced response time impact to prevent oscillation
-        return availability_weight * 0.5 + success_rate_weight * 0.4 + response_time_weight * 0.1
+        # Combined weight with emphasis on success rate and response time for LLM workloads
+        # Adjusted from original: response time now 30% (was 10%) as it's critical for LLM performance
+        return availability_weight * 0.4 + success_rate_weight * 0.3 + response_time_weight * 0.3
 
     def update_response_time(self, response_time: float):
         """Update response time history"""

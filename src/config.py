@@ -14,9 +14,9 @@ class LoadBalancerConfig:
     """Load balancer configuration"""
 
     health_check_interval: int = 30
-    request_timeout: int = 300
+    request_timeout: int = 60
     max_retries: int = 3
-    max_concurrent_batch: int = 50
+    max_concurrent_batch: int = 20
     connection_pool_size: int = 100
     dns_cache_ttl: int = 300
     enable_metrics: bool = True
