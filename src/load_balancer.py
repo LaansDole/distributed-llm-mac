@@ -184,13 +184,19 @@ class LoadBalancer:
                 if kwargs.get("stop"):
                     payload["options"]["stop"] = kwargs["stop"]
             elif worker.worker_type == WorkerType.LM_STUDIO:
+                # Convert repeat_penalty to frequency_penalty (range [0, 2])
+                # repeat_penalty typically ranges from 0.0 to 2.0, with 1.0 being neutral
+                # frequency_penalty for LM Studio expects positive values [0, 2.0]
+                repeat_penalty = kwargs.get("repeat_penalty", 1.1)
+                frequency_penalty = max(0.0, min(2.0, repeat_penalty - 1.0))
+                
                 payload = {
                     "model": worker.model,
                     "prompt": prompt,
                     "max_tokens": kwargs.get("max_tokens", 512),
                     "temperature": kwargs.get("temperature", 0.7),
                     "top_p": kwargs.get("top_p", 0.9),
-                    "frequency_penalty": 1.0 - kwargs.get("repeat_penalty", 1.1),
+                    "frequency_penalty": frequency_penalty,
                     "stop": kwargs.get("stop"),
                     "stream": False,
                 }
@@ -236,11 +242,11 @@ class LoadBalancer:
         except asyncio.TimeoutError:
             worker.record_failure()
             self.metrics["failed_requests"] += 1
-            raise Exception("Request timeout") from None
+            raise  # Preserve original TimeoutError type and context
         except Exception as e:
             worker.record_failure()
             self.metrics["failed_requests"] += 1
-            raise e
+            raise  # Preserve original exception type and context
         finally:
             worker.current_requests -= 1
             self.metrics["total_requests"] += 1

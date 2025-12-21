@@ -223,7 +223,6 @@ def main():
             asyncio.run(benchmark_mode(workers, args.benchmark))
 
         elif args.prompt:
-
             async def single_request():
                 async with LoadBalancer(workers, config=settings) as lb:
                     result = await lb.process_request(args.prompt)
@@ -254,3 +253,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
