@@ -23,6 +23,22 @@
       "type": "ollama",
       "model": "codellama",
       "max_concurrent_requests": 4
+    },
+    {
+      "id": "exo-cluster-01",
+      "host": "localhost",
+      "port": 52415,
+      "type": "exo",
+      "model": "llama-3.2-3b",
+      "max_concurrent_requests": 10
+    },
+    {
+      "id": "exo-cluster-02",
+      "host": "localhost",
+      "port": 52415,
+      "type": "exo",
+      "model": "llama-3.1-405b",
+      "max_concurrent_requests": 8
     }
   ]
 }

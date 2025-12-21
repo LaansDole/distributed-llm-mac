@@ -84,6 +84,9 @@ async def benchmark_with_scaling(workers: List[Worker], num_requests: int = 100,
     results = []
 
     async with LoadBalancer(workers) as lb:
+        # Wait for initial health checks to complete
+        await asyncio.sleep(2)
+        
         for concurrency in concurrency_levels:
             if concurrency > num_requests:
                 continue
@@ -96,6 +99,9 @@ async def benchmark_with_scaling(workers: List[Worker], num_requests: int = 100,
             print("Warming up...")
             await lb.process_batch(test_prompts[:5], max_concurrent=5)
 
+            # Clear metrics before the actual benchmark
+            lb.metrics['response_times'].clear()
+            
             # Actual benchmark
             print(f"Running {num_requests} requests with concurrency {concurrency}...")
             start_time = time.time()
@@ -111,9 +117,9 @@ async def benchmark_with_scaling(workers: List[Worker], num_requests: int = 100,
             successful = sum(1 for r in batch_results if r['success'])
             failed = num_requests - successful
 
-            # Calculate response times from metrics
+            # Get response times from this batch only (metrics were cleared before)
             metrics = lb.get_metrics()
-            response_times = list(lb.metrics['response_times'][-num_requests:])
+            response_times = list(lb.metrics['response_times'])
 
             result = {
                 'concurrency': concurrency,
