@@ -47,6 +47,7 @@ uv run python scripts/benchmark.py \
   -c config/single_studio.json \
   --requests 10 \
   --concurrency-levels 5 15 \
+  --max-tokens 100 \
   --mode concurrency \
   -o results_single.json
 
@@ -57,6 +58,7 @@ uv run python scripts/benchmark.py \
   -c config/my_workers.json \
   --requests 10 \
   --concurrency-levels 5 15 \
+  --max-tokens 100 \
   --mode concurrency \
   -o results_multiple.json
 

@@ -22,25 +22,26 @@ from src.config import load_workers_config
 
 
 def generate_test_prompts(count: int = 100) -> List[str]:
-    """Generate diverse test prompts"""
+    """Generate diverse test prompts optimized for short answers"""
+    # Short-answer prompts that naturally produce 10-50 token responses
     base_prompts = [
         "What is the capital of {country}?",
-        "Explain the concept of {concept} in simple terms.",
-        "Write a brief summary about {topic}.",
-        "What are the main advantages of {technology}?",
-        "How does {process} work?",
-        "Compare and contrast {item1} and {item2}.",
-        "What are the potential challenges of implementing {solution}?",
-        "Describe the key features of {product}.",
-        "Explain the importance of {field} in modern society.",
-        "What recent developments have occurred in {industry}?"
+        "Define {concept} in one sentence.",
+        "Name three benefits of {technology}.",
+        "What year was {event}?",
+        "List the primary colors.",
+        "How many days in a week?",
+        "What is 25 + 17?",
+        "Name the largest planet.",
+        "What is the speed of light?",
+        "Who invented {invention}?"
     ]
 
     countries = ["France", "Japan", "Brazil", "Canada", "Australia", "Germany", "India", "Mexico"]
-    concepts = ["artificial intelligence", "blockchain", "quantum computing", "machine learning", "neural networks"]
-    topics = ["climate change", "renewable energy", "space exploration", "biotechnology", "nanotechnology"]
-    technologies = ["solar power", "electric vehicles", "5G networks", "cloud computing", "IoT devices"]
-    processes = ["photosynthesis", "protein synthesis", "data encryption", "neural signaling", "DNA replication"]
+    concepts = ["AI", "blockchain", "encryption", "API", "cache"]
+    technologies = ["solar panels", "electric cars", "5G", "cloud storage", "GPS"]
+    events = ["WWI start", "moon landing", "internet creation", "first flight", "printing press invention"]
+    inventions = ["the telephone", "the light bulb", "the airplane", "the computer", "the internet"]
 
     prompts = []
     for i in range(count):
@@ -51,21 +52,14 @@ def generate_test_prompts(count: int = 100) -> List[str]:
             prompt = template.format(country=countries[i % len(countries)])
         elif "{concept}" in template:
             prompt = template.format(concept=concepts[i % len(concepts)])
-        elif "{topic}" in template:
-            prompt = template.format(topic=topics[i % len(topics)])
         elif "{technology}" in template:
             prompt = template.format(technology=technologies[i % len(technologies)])
-        elif "{process}" in template:
-            prompt = template.format(process=processes[i % len(processes)])
+        elif "{event}" in template:
+            prompt = template.format(event=events[i % len(events)])
+        elif "{invention}" in template:
+            prompt = template.format(invention=inventions[i % len(inventions)])
         else:
-            prompt = template.format(
-                item1="Python",
-                item2="JavaScript",
-                solution="renewable energy",
-                product="Tesla Model S",
-                field="data science",
-                industry="artificial intelligence"
-            )
+            prompt = template  # Use as-is for prompts without placeholders
 
         prompts.append(prompt)
 
@@ -73,7 +67,7 @@ def generate_test_prompts(count: int = 100) -> List[str]:
 
 
 async def benchmark_with_scaling(workers: List[Worker], num_requests: int = 100,
-                                concurrency_levels: List[int] = None):
+                                concurrency_levels: List[int] = None, max_tokens: int = 100):
     """Benchmark performance with different concurrency levels"""
 
     if concurrency_levels is None:
@@ -106,9 +100,13 @@ async def benchmark_with_scaling(workers: List[Worker], num_requests: int = 100,
             print(f"Running {num_requests} requests with concurrency {concurrency}...")
             start_time = time.time()
 
+            # Get max_tokens from args if available (passed via kwargs)
+            max_tokens = kwargs.get('max_tokens', 100)
+            
             batch_results = await lb.process_batch(
                 test_prompts,
-                max_concurrent=concurrency
+                max_concurrent=concurrency,
+                max_tokens=max_tokens
             )
 
             elapsed = time.time() - start_time
@@ -241,6 +239,8 @@ def main():
     parser.add_argument('--worker-counts', nargs='+', type=int,
                        default=[1, 2, 3, 5, 10],
                        help='Worker counts to test for scaling')
+    parser.add_argument('--max-tokens', type=int, default=100,
+                       help='Maximum tokens per response (default: 100, reduces from 512 for faster benchmarks)')
 
     args = parser.parse_args()
 
@@ -279,7 +279,12 @@ def main():
     if args.mode in ['concurrency', 'both']:
         print("\nStarting concurrency benchmark...")
         concurrency_results = asyncio.run(
-            benchmark_with_scaling(workers, args.requests, args.concurrency_levels)
+            benchmark_with_scaling(
+                workers, 
+                args.requests, 
+                args.concurrency_levels,
+                max_tokens=args.max_tokens
+            )
         )
         all_results['concurrency_benchmark'] = concurrency_results
 
