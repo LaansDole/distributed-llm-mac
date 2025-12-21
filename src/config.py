@@ -21,6 +21,10 @@ class LoadBalancerConfig:
     dns_cache_ttl: int = 300
     enable_metrics: bool = True
     log_level: str = "INFO"
+    # Additional settings for better multi-worker performance
+    use_keepalive: bool = True
+    connection_timeout: int = 10
+    socket_read_timeout: int = 60
 
 
 @dataclass

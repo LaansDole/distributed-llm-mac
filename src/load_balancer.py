@@ -53,16 +53,22 @@ class LoadBalancer:
 
     async def start(self):
         """Start the load balancer"""
-        # Create aiohttp session with connection pooling
+        # Create aiohttp session with optimized connection pooling for multiple workers
         connector = aiohttp.TCPConnector(
-            limit_per_host=self.config.connection_pool_size,
+            limit=self.config.connection_pool_size * 2,  # Increase total limit for multiple workers
+            limit_per_host=max(10, self.config.connection_pool_size // len(self.workers)),  # Distribute connections per host
             ttl_dns_cache=self.config.dns_cache_ttl,
             use_dns_cache=True,
-            keepalive_timeout=30,
+            keepalive_timeout=60,  # Increase keepalive for better connection reuse
             enable_cleanup_closed=True,
+            force_close=False,  # Keep connections alive for better performance
         )
 
-        timeout = aiohttp.ClientTimeout(total=self.config.request_timeout, connect=10, sock_read=60)
+        timeout = aiohttp.ClientTimeout(
+            total=self.config.request_timeout,
+            connect=getattr(self.config, 'connection_timeout', 10),
+            sock_read=getattr(self.config, 'socket_read_timeout', 60)
+        )
 
         self.session = aiohttp.ClientSession(
             connector=connector, timeout=timeout, headers={"Content-Type": "application/json"}
@@ -91,12 +97,27 @@ class LoadBalancer:
         logger.info("Load balancer stopped")
 
     def _select_worker(self) -> Optional[Worker]:
-        """Select the best available worker using weighted selection"""
+        """Select the best available worker using hybrid weighted/round-robin selection"""
         available_workers = [w for w in self.workers if w.is_available]
 
         if not available_workers:
             logger.warning("No available workers")
             return None
+
+        # For small numbers of workers with similar performance, use round-robin for better distribution
+        if len(available_workers) <= 3:
+            # Check if workers have similar performance (within 20% of each other)
+            response_times = [w.average_response_time for w in available_workers if w.average_response_time > 0]
+            if len(response_times) >= 2:
+                min_time = min(response_times)
+                max_time = max(response_times)
+                if max_time / min_time < 1.2:  # Within 20% performance
+                    # Use round-robin for similar performers
+                    if not hasattr(self, '_last_selected_index'):
+                        self._last_selected_index = 0
+                    worker = available_workers[self._last_selected_index % len(available_workers)]
+                    self._last_selected_index += 1
+                    return worker
 
         # Calculate weights based on worker metrics
         weights = []
@@ -104,7 +125,7 @@ class LoadBalancer:
             weight = worker.weight
             weights.append(weight)
 
-        # Weighted random selection
+        # Weighted random selection with bias for less-loaded workers
         total_weight = sum(weights)
         if total_weight == 0:
             return random.choice(available_workers)
