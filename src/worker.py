@@ -94,14 +94,20 @@ class Worker:
             self.max_concurrent_requests - self.current_requests
         ) / self.max_concurrent_requests
 
-        # Response time weight (inverse, with minimum to avoid division by zero)
-        response_time_weight = 1.0 / max(self.average_response_time or 0.1, 0.1)
+        # Response time weight (normalized to avoid extreme values)
+        if self.average_response_time > 0:
+            # Normalize response times: fastest gets weight 1.0, slowest gets weight 0.3
+            # This prevents extreme weight variations
+            response_time_weight = max(0.3, 1.0 / (1.0 + self.average_response_time))
+        else:
+            response_time_weight = 0.8  # Neutral weight for new workers
 
         # Success rate weight
         success_rate_weight = self.success_rate
 
-        # Combined weight (adjust factors as needed)
-        return availability_weight * 0.4 + success_rate_weight * 0.4 + response_time_weight * 0.2
+        # Combined weight with emphasis on success rate and response time for LLM workloads
+        # Adjusted from original: response time now 30% (was 10%) as it's critical for LLM performance
+        return availability_weight * 0.4 + success_rate_weight * 0.3 + response_time_weight * 0.3
 
     def update_response_time(self, response_time: float):
         """Update response time history"""

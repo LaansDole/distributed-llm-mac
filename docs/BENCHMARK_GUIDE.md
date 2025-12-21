@@ -143,10 +143,10 @@ Tests performance with different numbers of workers (1, 2, 3, 5, 10).
 ## Interpreting Results
 
 ### Good Performance Indicators
-- ✅ Success rate: 100%
-- ✅ Linear scaling (3 workers ≈ 2.8x speedup)
-- ✅ Even worker utilization (~33% each with 3 workers)
-- ✅ P95 response time < 1.0s
+- Success rate: 100%
+- Linear scaling (3 workers ≈ 2.8x speedup)
+- Even worker utilization (~33% each with 3 workers)
+- P95 response time < 1.0s
 
 ### Performance Issues
 

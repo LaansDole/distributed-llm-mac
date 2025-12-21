@@ -53,16 +53,23 @@ class LoadBalancer:
 
     async def start(self):
         """Start the load balancer"""
-        # Create aiohttp session with connection pooling
+        # Optimized connection pooling: limit based on worker count, not total pool size
+        # Each worker should have reasonable connection limit matching their capacity
         connector = aiohttp.TCPConnector(
-            limit_per_host=self.config.connection_pool_size,
+            limit=len(self.workers) * 20,  # 20 connections per worker
+            limit_per_host=10,  # Fixed reasonable limit per backend
             ttl_dns_cache=self.config.dns_cache_ttl,
             use_dns_cache=True,
-            keepalive_timeout=30,
+            keepalive_timeout=90,  # Extended keepalive for LLM workloads
             enable_cleanup_closed=True,
+            force_close=False,  # Keep connections alive for better performance
         )
 
-        timeout = aiohttp.ClientTimeout(total=self.config.request_timeout, connect=10, sock_read=60)
+        timeout = aiohttp.ClientTimeout(
+            total=self.config.request_timeout,
+            connect=getattr(self.config, 'connection_timeout', 10),
+            sock_read=getattr(self.config, 'socket_read_timeout', 60)
+        )
 
         self.session = aiohttp.ClientSession(
             connector=connector, timeout=timeout, headers={"Content-Type": "application/json"}
@@ -91,11 +98,10 @@ class LoadBalancer:
         logger.info("Load balancer stopped")
 
     def _select_worker(self) -> Optional[Worker]:
-        """Select the best available worker using weighted selection"""
+        """Select the best available worker using weighted random selection"""
         available_workers = [w for w in self.workers if w.is_available]
 
         if not available_workers:
-            logger.warning("No available workers")
             return None
 
         # Calculate weights based on worker metrics
@@ -104,7 +110,7 @@ class LoadBalancer:
             weight = worker.weight
             weights.append(weight)
 
-        # Weighted random selection
+        # Weighted random selection with bias for less-loaded workers
         total_weight = sum(weights)
         if total_weight == 0:
             return random.choice(available_workers)
