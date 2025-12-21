@@ -102,7 +102,6 @@ class LoadBalancer:
         available_workers = [w for w in self.workers if w.is_available]
 
         if not available_workers:
-            logger.warning("No available workers")
             return None
 
         # Calculate weights based on worker metrics
