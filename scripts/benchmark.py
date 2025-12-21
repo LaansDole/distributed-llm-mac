@@ -99,9 +99,6 @@ async def benchmark_with_scaling(workers: List[Worker], num_requests: int = 100,
             # Actual benchmark
             print(f"Running {num_requests} requests with concurrency {concurrency}...")
             start_time = time.time()
-
-            # Get max_tokens from args if available (passed via kwargs)
-            max_tokens = kwargs.get('max_tokens', 100)
             
             batch_results = await lb.process_batch(
                 test_prompts,
