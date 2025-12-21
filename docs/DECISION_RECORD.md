@@ -282,41 +282,6 @@ async def process_batch(self, prompts: List[str], **kwargs):
 - Firewall configured to allow worker ports
 - No encryption for local communication
 
-### 20. Input Validation
-
-**Decision**: Basic input validation for configuration and requests.
-
-**Validations**:
-- Required configuration fields
-- Valid worker types
-- Port number ranges
-- File existence checks
-
-## Future Considerations
-
-### Potential Enhancements
-
-1. **Authentication**: Add API key support for workers
-2. **Encryption**: TLS for cross-network deployments
-3. **Service Discovery**: Automatic worker discovery
-4. **Load Persistence**: Redis-based load state storage
-5. **Advanced Routing**: Content-based request routing
-6. **Streaming Support**: Real-time response streaming
-
-### Scalability Limits
-
-Current design optimized for:
-- 1-35 workers on local network
-- Hundreds of concurrent requests
-- Local Mac hardware ecosystem
-- Research paper processing workloads
-
-For larger deployments, consider:
-- Distributed coordination (etcd/consul)
-- Message queue architecture
-- Microservices decomposition
-- Container orchestration
-
 ## Conclusion
 
 These architectural decisions have resulted in a system that:

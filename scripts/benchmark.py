@@ -168,9 +168,11 @@ async def benchmark_worker_scaling(worker_counts: List[int], base_config: Dict,
         print(f"{'='*60}")
 
         # Create subset of workers
+        # Handle base_config being dict or list
+        workers_list = base_config if isinstance(base_config, list) else base_config.get('workers', [])
         workers = []
-        for i in range(min(count, len(base_config['workers']))):
-            worker_data = base_config['workers'][i]
+        for i in range(min(count, len(workers_list))):
+            worker_data = workers_list[i]
             workers.append(Worker(
                 id=worker_data['id'],
                 host=worker_data['host'],
