@@ -84,6 +84,9 @@ async def benchmark_with_scaling(workers: List[Worker], num_requests: int = 100,
     results = []
 
     async with LoadBalancer(workers) as lb:
+        # Wait for initial health checks to complete
+        await asyncio.sleep(2)
+        
         for concurrency in concurrency_levels:
             if concurrency > num_requests:
                 continue
